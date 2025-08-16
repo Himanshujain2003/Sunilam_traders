@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sunilam Traders: shop everything</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap CSS & Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <style>
+        html, body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-image: url("/assets/backk.png");
+            background-size: cover;
+            min-height: 100vh;
+        }
+        .stock-container {
+            background: rgb(142, 126, 126);
+            margin: 40px auto;
+            padding: 30px;
+            border-radius: 18px;
+            max-width: 900px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        }
+        h1 {
+            text-align: center;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+        .custom-btn {
+            font-size: 16px;
+            padding: 8px 18px;
+            border-radius: 4px;
+            background: #34495e;
+            color: #fff;
+            border: none;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+        .custom-btn:hover {
+            background: #34495e;
+            color: #fff;
+        }
+        table {
+            background: #f4f3f3;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th {
+            background: #34495e;
+            color: #fff;
+            font-weight: 600;
+        }
+        td {
+            vertical-align: middle;
+        }
+        tr:nth-child(even) {
+            background: white;
+        }
+        .no-data-row td {
+            text-align: center;
+            color: red;
+            font-weight: bold;
+        }
+        #searchInput {
+            border-radius: 8px;
+            border: 2px solid #34495e;
+            font-size: 1rem;
+            padding: 10px 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(44, 73, 94, 0.08);
+        }
+        #searchInput:focus {
+            border-color: #2c3e50;
+            outline: none;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            width: 40px;
+            height: 40px;
+            background: white;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .pagination button.active {
+            background: #100f0f;
+            color: white;
+            border: none;
+        }
+        @media (max-width: 600px) {
+            #searchInput {
+                width: 100% !important;
+            }
+        }
+        .imglogo {
+            width: 160px;
+            height: 120px;
+            border-radius: 50%;
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+        }
+        .modal-header {
+            background-color: #0a0a0a;
+            color: white;
+        }
+        .table-bordered th, .table-bordered td {
+            border: 1px solid #ddd;
+            color: #0a0a0a;
+            
+        }
+    </style>
+</head>
+<body>
+    <img src="/assets/logo.png" class="imglogo" alt="Sunilam Traders Logo">
+    <div class="stock-container">
+        <button class="custom-btn" onclick="window.location.href='home.html'">
+            <i class="bi bi-arrow-left"></i> Back
+        </button>
+        <h1>Stock Dashboard</h1>
+        <div class="d-flex flex-wrap gap-2 mb-3 align-items-center justify-content-between">
+            <input type="text" class="form-control flex-grow-1" id="searchInput" placeholder="Search by product name..." onkeyup="filterStocks()" style="max-width:350px;">
+            <a href="stock_low.html" class="custom-btn">
+                <i class="bi bi-exclamation-triangle-fill"></i> Stock Alert
+            </a>
+        </div>
+
+        <!-- Table -->
+        <table class="table table-bordered stock-table" id="stockTable">
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Quantity</th>
+                    <th>Unit Name</th>
+                    <th>Price Per Unit</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Confirm Delete</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p id="deleteMessage">Are you sure you want to delete this item?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:5000/api/stocks';
+        let fullStockData = [];
+        let currentPage = 1;
+        const rowsPerPage = 5;
+        let deleteId = null;
+
+        function renderTable(data, page = 1) {
+            const tbody = document.querySelector('#stockTable tbody');
+            tbody.innerHTML = '';
+            const start = (page - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = data.slice(start, end);
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = `<tr class="no-data-row"><td colspan="5">No stock data available.</td></tr>`;
+                return;
+            }
+
+            pageData.forEach(stock => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${stock.product_name}</td>
+                    <td>${stock.quantity}</td>
+                    <td>${stock.unit_name}</td>
+                    <td>${stock.price_per_unit}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-2" onclick="redirectToUpdate(${stock.id})">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="openDeleteModal(${stock.id}, '${stock.product_name}')">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderPagination(data) {
+            const paginationElement = document.getElementById("pagination");
+            paginationElement.innerHTML = "";
+            const pageCount = Math.ceil(data.length / rowsPerPage);
+
+            // Don't show pagination if there's only one page or no data.
+            if (pageCount <= 1) {
+                return;
+            }
+
+            // Previous button: <
+            const prevBtn = document.createElement("button");
+            prevBtn.innerHTML = "&lt;";
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => { currentPage--; updateTableAndPagination(); };
+            paginationElement.appendChild(prevBtn);
+
+            // Current page number display: 1
+            const pageNumBtn = document.createElement("button");
+            pageNumBtn.innerText = currentPage;
+            pageNumBtn.classList.add("active"); // Style it as the current page
+            paginationElement.appendChild(pageNumBtn);
+
+            // Next button: >
+            const nextBtn = document.createElement("button");
+            nextBtn.innerHTML = "&gt;";
+            nextBtn.disabled = currentPage === pageCount;
+            nextBtn.onclick = () => { currentPage++; updateTableAndPagination(); };
+            paginationElement.appendChild(nextBtn);
+        }
+
+        function fetchStocks() {
+            fetch(API_URL)
+                .then(response => response.json())
+                .then(data => {
+                    fullStockData = Array.isArray(data) ? data : [];
+                    currentPage = 1;
+                    updateTableAndPagination();
+                })
+                .catch(err => {
+                    document.querySelector('#stockTable tbody').innerHTML = `<tr class="no-data-row"><td colspan="5">Error loading stock data.</td></tr>`;
+                });
+        }
+
+        function openDeleteModal(id, productName) {
+            deleteId = id;
+            document.getElementById('deleteMessage').innerText = `Are you sure you want to delete "${productName}"?`;
+            const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+        }
+
+        document.getElementById('confirmDeleteBtn').addEventListener('click', () => {
+            if (deleteId !== null) {
+                fetch(`${API_URL}/${deleteId}`, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.message) fetchStocks();
+                        else alert(`Error: ${result.error}`);
+                    })
+                    .catch(err => alert('Error deleting stock: ' + err))
+                    .finally(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                        deleteId = null;
+                    });
+            }
+        });
+
+        function redirectToUpdate(id) {
+            window.location.href = `update_stock.html?id=${id}`;
+        }
+
+        function filterStocks() {
+            currentPage = 1;
+            updateTableAndPagination();
+        }
+
+        function updateTableAndPagination() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = fullStockData.filter(stock =>
+                stock.product_name.toLowerCase().includes(input)
+            );
+            renderTable(filtered, currentPage);
+            renderPagination(filtered);
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchStocks);
+    </script>
+</body>
+</html>

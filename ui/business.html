@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Business Entry</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: url("/assets/backk.png") no-repeat center center fixed;
+      background-size: cover;
+    }
+    .form-wrapper {
+      background: rgba(142, 126, 126);
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 800px;
+      margin: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    }
+    h2 {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 25px;
+    }
+    .back-btn {
+      margin-bottom: 20px;
+      font-size: 16px;
+      padding: 8px 18px;
+      border-radius: 6px;
+      background: #34495e;
+      color: #fff;
+      border: none;
+      transition: 0.2s;
+    }
+    .back-btn:hover {
+      background: #2c3e50;
+    }
+    .imglogo {
+      width: 160px;
+      height: 120px;
+      border-radius: 50%;
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+    }
+    .btn-success {
+      background-color: #0a0a0a; 
+      color: white;
+      border-radius: 10px;
+      padding: 10px 20px;
+      border: none;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    .btn-success:hover {
+      background-color: #222222;
+      font-weight: bold;
+    }
+    #message .text-success {
+      color: #101010 !important; /* Bootstrap's default success color */
+      padding: 10px;
+      border-radius: 5px;
+      font-weight: bold;
+    }
+    #message .text-danger {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body class="p-3">
+
+<div class="container">
+  <img src="/assets/logo.png" class="imglogo" alt="Sunilam Traders Logo">
+
+  <div class="form-wrapper">
+    <button class="back-btn" onclick="window.location.href='home.html'">
+      <i class="fas fa-arrow-left"></i> Back
+    </button>
+
+    <h2>Business Entry</h2>
+
+    <form id="businessForm">
+      <div class="row">
+        <!-- Left side -->
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="product_name" class="form-label">Product Name</label>
+            <input type="text" class="form-control" id="product_name" name="product_name" list="productList" required>
+            <datalist id="productList"></datalist>
+          </div>
+          <div class="mb-3">
+            <label for="quantity" class="form-label">Quantity</label>
+            <input type="number" class="form-control" id="quantity" name="quantity" required min="0">
+          </div>
+          <div class="mb-3">
+            <label for="unit_name" class="form-label">Unit</label>
+            <select id="unit_name" name="unit_name" class="form-control" required>
+              <option value="">Select Unit</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="price_per_unit" class="form-label">Price Per Unit</label>
+            <input type="number" step="0.01" class="form-control" id="price_per_unit" name="price_per_unit" required min="0">
+          </div>
+          <div class="mb-3">
+            <label for="customer_name" class="form-label">Customer Name (Optional)</label>
+            <input type="text" class="form-control" id="customer_name" name="customer_name">
+          </div>
+        </div>
+
+        <!-- Right side -->
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label for="amount" class="form-label">Amount</label>
+            <input type="number" step="0.01" class="form-control" id="amount" name="amount" required min="0">
+          </div>
+          <div class="mb-3">
+            <label for="transaction_type" class="form-label">Transaction Type</label>
+            <select id="transaction_type" name="transaction_type" class="form-control" required>
+              <option value="Buy">Buy</option>
+              <option value="Sell">Sell</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="entry_date" class="form-label">Date</label>
+            <input type="date" class="form-control" id="entry_date" name="entry_date" required>
+          </div>
+          <div class="mb-3">
+            <label for="entry_by" class="form-label">Entry By</label>
+            <input type="text" class="form-control" id="entry_by" name="entry_by" readonly>
+          </div>
+        </div>
+      </div>
+
+      <!-- Submit button centered at bottom -->
+      <div class="text-center mt-4">
+        <button type="submit" class="btn btn-success px-5">Submit</button>
+      </div>
+    </form>
+
+    <div id="message" class="mt-3 text-center"></div>
+  </div>
+</div>
+
+<script>
+const API_URL = 'http://127.0.0.1:5000/api/stocks';
+const BUSINESS_API_URL = 'http://127.0.0.1:5000/api/stock/business';
+let allStocks = []; // To store fetched stock data for auto-filling
+
+// Load username from localStorage
+function loadUsername() {
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+        document.getElementById('entry_by').value = storedUsername;
+    } else {
+        // If no user is logged in, redirect to the login page for security
+        alert("You are not logged in. Redirecting to login page.");
+        window.location.href = 'index.html';
+    }
+}
+
+// Load stock and unit data
+async function loadStockData() {
+  const messageDiv = document.getElementById("message");
+  try {
+    const stockRes = await fetch(API_URL);
+    if (!stockRes.ok) throw new Error(`Failed to load stock data: ${stockRes.statusText}`);
+    const stocks = await stockRes.json();
+    allStocks = stocks; // Store for later use
+
+    const productDatalist = document.getElementById("productList");
+    productDatalist.innerHTML = ''; // Clear existing options
+    stocks.forEach(stock => {
+      const opt = document.createElement("option");
+      opt.value = stock.product_name;
+      productDatalist.appendChild(opt);
+    });
+
+    // Dynamically populate units from the fetched stocks to avoid hardcoding
+    const uniqueUnits = [...new Set(stocks.map(s => s.unit_name).filter(Boolean))];
+    const unitDropdown = document.getElementById("unit_name");
+    unitDropdown.innerHTML = '<option value="">Select Unit</option>';
+    uniqueUnits.forEach(unit => {
+      const opt = document.createElement("option");
+      opt.value = unit;
+      opt.textContent = unit.charAt(0).toUpperCase() + unit.slice(1); // Capitalize
+      unitDropdown.appendChild(opt);
+    });
+
+    document.getElementById("entry_date").valueAsDate = new Date();
+  } catch (error) {
+    messageDiv.innerHTML = `<span class="text-danger">Error loading initial data: ${error.message}</span>`;
+  }
+}
+
+// Auto-fill product details on selection from datalist
+function autoFillProductDetails() {
+    const productName = document.getElementById('product_name').value;
+    const selectedStock = allStocks.find(stock => stock.product_name === productName);
+
+    if (selectedStock) {
+        document.getElementById('unit_name').value = selectedStock.unit_name;
+        document.getElementById('price_per_unit').value = selectedStock.price_per_unit;
+        calculateAmount(); // Recalculate amount when price is auto-filled
+    }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadUsername();
+  loadStockData();
+});
+
+document.getElementById("product_name").addEventListener("input", autoFillProductDetails);
+document.getElementById("quantity").addEventListener("input", calculateAmount);
+document.getElementById("price_per_unit").addEventListener("input", calculateAmount);
+
+function calculateAmount() {
+  const qty = parseFloat(document.getElementById("quantity").value) || 0;
+  const price = parseFloat(document.getElementById("price_per_unit").value) || 0;
+  const total = qty * price;
+  document.getElementById("amount").value = total > 0 ? total.toFixed(2) : '';
+}
+
+document.getElementById("businessForm").addEventListener("submit", async function (e) {
+  e.preventDefault();
+  const messageDiv = document.getElementById("message");
+  messageDiv.innerHTML = ''; // Clear previous messages
+
+  const formData = {
+    product_name: document.getElementById('product_name').value,
+    quantity: parseInt(document.getElementById('quantity').value),
+    unit_name: document.getElementById('unit_name').value,
+    price_per_unit: parseFloat(document.getElementById('price_per_unit').value),
+    customer_name: document.getElementById('customer_name').value,
+    amount: parseFloat(document.getElementById('amount').value),
+    transaction_type: document.getElementById('transaction_type').value,
+    entry_date: document.getElementById('entry_date').value,
+    entry_by: document.getElementById('entry_by').value
+  };
+
+  try {
+    const response = await fetch(BUSINESS_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData)
+    });
+
+    const result = await response.json();
+    if (response.ok) {
+        messageDiv.innerHTML = `<span class="text-success">${result.message || 'Business entry saved and stock updated.'}</span>`;
+        this.reset(); // Reset form on success
+        loadUsername(); // Repopulate username
+        document.getElementById("entry_date").valueAsDate = new Date(); // Reset date
+        setTimeout(() => { messageDiv.innerHTML = ''; }, 4000); // Clear message after 4 seconds
+    } else {
+        // Handle server-side validation errors or other issues
+        throw new Error(result.error || 'An unknown error occurred.');
+    }
+  } catch (error) {
+    document.getElementById("message").innerHTML = `<span class="text-danger">Error: ${error.message}</span>`;
+  }
+});
+</script>
+</body>
+</html>

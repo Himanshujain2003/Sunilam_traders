@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sunilam Traders: Shop Everything</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    /* Reset and basic styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: url('/assets/backk.png') no-repeat center center fixed;
+      background-size: cover;
+    }
+
+    /* Glassmorphism container */
+    .signup-container {
+      background: rgba(142, 126, 126);
+      backdrop-filter: blur(12px);
+      padding: 50px 35px;
+      border-radius: 25px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+      color: #fff;
+      text-align: center;
+    }
+
+    .signup-container h2 {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'Segoe UI', sans-serif;
+      
+      margin-bottom: 10px;
+      color: #262525;
+    }
+
+    .signup-container h3 {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 25px;
+      color: #040404;
+    }
+
+    .form-group {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 12px 40px 12px 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.85);
+      color: #000;
+      outline: none;
+    }
+
+    .toggle-password {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #333;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #fdfdfd, white);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    .submit-btn:hover {
+      background: linear-gradient(135deg, #e0dfdf, #c9cbcd);
+    }
+
+    .error-message {
+      color: #ffea00;
+      font-size: 12px;
+      text-align: left;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 480px) {
+      .signup-container {
+        padding: 30px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="signup-container">
+    <h2>Sunilam Traders</h2>
+    <h3>Create Your Account</h3>
+    <form id="signupForm">
+      <div class="form-group">
+        <input type="text" id="name" placeholder="Full Name" required>
+        <div class="error-message" id="nameError"></div>
+      </div>
+
+      <div class="form-group">
+        <input type="text" id="username" placeholder="Username" required>
+        <div class="error-message" id="usernameError"></div>
+      </div>
+
+      <div class="form-group">
+        <input type="password" id="password" placeholder="Password" required>
+        <div class="error-message" id="passwordError"></div>
+      </div>
+
+      <div class="form-group">
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+        <div class="error-message" id="confirmPasswordError"></div>
+      </div>
+
+      <button type="submit" class="submit-btn">Sign Up</button>
+    </form>
+  </div>
+
+  <script>
+    // Password toggle
+    document.querySelectorAll('.toggle-password').forEach(icon => {
+      icon.addEventListener('click', () => {
+        const targetId = icon.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        input.type = input.type === 'password' ? 'text' : 'password';
+        icon.classList.toggle('fa-eye-slash');
+      });
+    });
+
+    // Form validation and fetch
+    document.getElementById("signupForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const name = document.getElementById("name").value.trim();
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const confirmPassword = document.getElementById("confirmPassword").value.trim();
+
+      document.getElementById("nameError").textContent = "";
+      document.getElementById("usernameError").textContent = "";
+      document.getElementById("passwordError").textContent = "";
+      document.getElementById("confirmPasswordError").textContent = "";
+
+      let valid = true;
+
+      if (name.length < 3) {
+        document.getElementById("nameError").textContent = "Name must be at least 3 characters.";
+        valid = false;
+      }
+      if (username.length < 3) {
+        document.getElementById("usernameError").textContent = "Username must be at least 3 characters.";
+        valid = false;
+      }
+      if (password.length < 6) {
+        document.getElementById("passwordError").textContent = "Password must be at least 6 characters.";
+        valid = false;
+      }
+      if (password !== confirmPassword) {
+        document.getElementById("confirmPasswordError").textContent = "Passwords do not match.";
+        valid = false;
+      }
+
+      if (valid) {
+        fetch('http://127.0.0.1:5000/api/stock/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, username, password })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.message) {
+            alert(data.message);
+            window.location.href = "index.html";
+          } else {
+            alert(data.error || "Signup failed.");
+          }
+        })
+        .catch(() => {
+          alert("Server error. Please try again.");
+        });
+      }
+    });
+  </script>
+</body>
+</html>

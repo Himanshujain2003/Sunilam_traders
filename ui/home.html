@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunilam Traders: Shop Everything</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+       .main-card {
+            background: rgba(17, 16, 16, 0.64);
+            border-radius: 30px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            padding: 60px;
+            width: 600px;
+            text-align: center;
+            color: rgb(233, 227, 227);
+        }
+        .custom-btn {
+            display: flex;
+            flex-direction: column;
+            height: 10rem;
+            width: 10rem;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        img {
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+        }
+        .cards {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .welcome {
+            height: 100vh;
+            background-image: url("/assets/backk.png");
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logout-btn {
+            height: 2.5rem;
+            width: 8rem;
+            border-radius: 10px;
+            background-color: black;
+            color: white;
+            font-weight: 500;
+            margin-top: 1rem;
+            border: none;
+        }
+        .logout-btn:hover {
+            background-color: white;
+            color: black;
+        }
+        .nav-bar {
+            height: 100%;
+            width: 15rem;
+            background-color: rgba(142,126,126, 1);
+            position: fixed;
+            left: -300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 1rem;
+            transition: left 0.3s ease;
+        }
+        .checkbox:checked ~ .nav-bar {
+            left: 0rem;
+        }
+        .nav-bar i{
+            font-size: 1.5rem;
+            color: black;   
+        }
+        .checkbox{
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            opacity: 0;
+        }
+        .fa-bars{
+            font-size: 1.5rem;
+            color: white;
+            position:fixed;
+            top:1rem;
+            left: 1rem;
+        }
+        .fa-arrow-right{
+            font-size: 1.5rem;
+            color: black;
+            position: absolute;
+            top: 1rem;
+            right: 1rem;        
+        }
+        /* Circle Logo inside nav */
+        .user-logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            margin-bottom: 10px;
+        }
+        .username {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+        .hello-text {
+            font-size: 1rem;
+            color: white;
+            margin-bottom: 5px;
+            border-radius: 7px 7px 0 0;
+        }
+        .username, .hello-text {
+            text-align: center;
+            width: 100%;
+            margin: 0;
+            background-color: rgba(0, 0, 0, 0.432);
+        }
+        .user-logo
+        {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid white;
+            margin-bottom: 10px;
+            background-color: black;
+        }
+        /* Top-right floating logo on main page */
+        .imglogo {
+            width: 160px;
+            height: 120px;
+            border-radius: 50%;
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            object-fit: cover;
+        }
+        .about {
+            font-size: 1.1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            font-style: italic;
+            text-align: center;
+            color: rgba(0, 0, 0, 0.844);
+        }
+
+        @media (max-width: 600px) {
+            .main-card {
+                width: 90%;
+                padding: 30px;
+            }
+            .custom-btn {
+                height: 5rem;
+                width: 5rem;
+            }
+            
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="welcome">
+        <!-- Top-right main page logo -->
+        <img src="/assets/logo.png" class="imglogo" alt="Sunilam Traders Logo">
+
+        <!-- Checkbox for toggle -->
+        <input type="checkbox" class="checkbox" id="checkbox1">
+        <label for="checkbox1"><i class="fa-solid fa-bars"></i></label>
+
+        <!-- Side Navigation -->
+        <div class="nav-bar">
+            <!-- User Profile Section -->
+            <img src="/assets/user.png" class="user-logo" alt="User Logo">
+            <div class="hello-text">Hello,</div>
+            <div class="username"></div>
+            
+
+            <!-- Logout -->
+            <button class="logout-btn" onclick="logoutUser()">Logout</button>
+            <label for="checkbox1" style="cursor:pointer; margin-top:1rem;">
+                <i class="fa-solid fa-arrow-right"></i>
+            </label>
+
+            <div class="about">
+                <h2 style="text-decoration:underline;">About us</h2>
+
+            <p class="about-text">Your one-stop shop for quality products at the best prices. We deliver trust, variety, and value to meet all your daily needs.</p>
+            </div>
+            
+
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-card">
+            <h1>Welcome to Sunilam Traders</h1>
+
+            <div class="cards">
+                <a href="stocks.html" class="custom-btn">
+                    <img src="/assets/view_icon.png" alt="View Stock">
+                </a>
+                <a href="add_stock.html" class="custom-btn">
+                    <img src="/assets/add_stock.png" alt="Add Stock">
+                </a>
+                <a href="business.html" class="custom-btn">
+                    <img src="/assets/business_entry.png" alt="Business Entry">
+                </a>
+                <a href="dailystates.html" class="custom-btn">
+                    <img src="/assets/dailystats.png" alt="Daily States">
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show stored username in sidebar
+        document.addEventListener("DOMContentLoaded", function () {
+            const usernameDisplay = document.querySelector(".username");
+            const storedUsername = localStorage.getItem("username");
+
+            if (storedUsername) {
+                usernameDisplay.textContent = storedUsername;
+            } else {
+                // If no user is logged in, they shouldn't be on this page.
+                // Redirect them to the login page for security.
+                window.location.href = "index.html";
+            }
+        });
+
+        // Logout function
+        function logoutUser() {
+            localStorage.removeItem("username");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

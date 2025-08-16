@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sunilam Traders: shop everything</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <style>
+        html, body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        body {
+            background-image: url("/assets/backk.png");
+            background-size: cover;
+            min-height: 100vh;
+        }
+        .form-container {
+            background: rgb(142, 126, 126);
+            max-width: 500px;
+            margin: 60px auto;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        }
+        .back-btn {
+            margin-bottom: 20px;
+            font-size: 16px;
+            padding: 8px 18px;
+            border-radius: 6px;
+            background: #34495e;
+            color: #fff;
+            border: none;
+            transition: background 0.2s;
+        }
+        .back-btn:hover {
+            background: #34495e;
+            color: #e8e7e5;
+        }
+        .imglogo {
+            width: 160px;
+            height: 120px;
+            border-radius: 50%;
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+        }
+        .btn-success {
+            background-color: #070707;
+            color: white;
+            border: 1px solid #090909;
+        }
+        .btn-success:hover {
+            background-color: #222;
+            border-color: #0a0a0a;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <img src="/assets/logo.png" class="imglogo" alt="Sunilam Traders Logo">
+    <div class="form-container">
+        <button class="back-btn" id="backBtn">
+            <i class="fas fa-arrow-left"></i> Back
+        </button>
+        
+        <h2 class="mb-4 text-center">Add New Stock</h2>
+        <form id="addStockForm">
+            <div class="mb-3">
+                <label for="productName" class="form-label">Product Name*</label>
+                <input type="text" class="form-control" id="productName" required>
+            </div>
+            <div class="mb-3">
+                <label for="quantity" class="form-label">Quantity*</label>
+                <input type="number" class="form-control" id="quantity" min="1" required>
+            </div>
+            <div class="mb-3">
+                <label for="unit_id" class="form-label">Unit*</label>
+                <select class="form-select" id="unit_id" required>
+                    <option value="">Select Unit</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="pricePerUnit" class="form-label">Price Per Unit*</label>
+                <input type="number" class="form-control" id="pricePerUnit" min="0.01" step="0.01" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Add Stock</button>
+        </form>
+        <div id="message" class="mt-3 text-center"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:5000/api';
+        const addStockForm = document.getElementById('addStockForm');
+        const messageDiv = document.getElementById('message');
+        const unitDropdown = document.getElementById('unit_id');
+
+        document.getElementById('backBtn').addEventListener('click', () => {
+            window.location.href = 'home.html';
+        });
+
+        // Load units dynamically
+        async function loadUnits() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/units`);
+                if (!res.ok) throw new Error(`Failed to load units (Status: ${res.status})`);
+                const units = await res.json();
+                units.forEach(unit => {
+                    const option = document.createElement('option');
+                    option.value = unit.id;
+                    option.textContent = unit.unit_name;
+                    unitDropdown.appendChild(option);
+                });
+            } catch (err) {
+                messageDiv.innerHTML = `<span class="text-danger fw-bold">Error: ${err.message}</span>`;
+            }
+        }
+        document.addEventListener('DOMContentLoaded', loadUnits);
+
+        // Normalize name for duplicate check
+        function normalizeName(name) {
+            return name.toLowerCase().replace(/\s+/g, '');
+        }
+
+        // Check if product name already exists (ignoring case & spaces)
+        async function isDuplicateName(productName) {
+            try {
+                const res = await fetch(`${API_BASE_URL}/stocks`);
+                if (!res.ok) return false;
+                const stocks = await res.json();
+                const normalizedInput = normalizeName(productName);
+                return stocks.some(stock => normalizeName(stock.product_name) === normalizedInput);
+            } catch {
+                return false;
+            }
+        }
+
+        // Handle form submission
+        addStockForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            messageDiv.innerHTML = '';
+
+            const productName = document.getElementById('productName').value.trim();
+            const quantity = parseInt(document.getElementById('quantity').value, 10);
+            const unitId = parseInt(document.getElementById('unit_id').value, 10);
+            const pricePerUnit = parseFloat(document.getElementById('pricePerUnit').value);
+
+            // Check for duplicate
+            if (await isDuplicateName(productName)) {
+                messageDiv.innerHTML = `<span class="text-danger fw-bold">Error: This product already exists.</span>`;
+                return;
+            }
+
+            const stockData = { product_name: productName, quantity, unit_id: unitId, price_per_unit: pricePerUnit };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/stocks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(stockData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    messageDiv.innerHTML = `<span class="text-success fw-bold">${data.message}</span>`;
+                    addStockForm.reset();
+                    setTimeout(() => { messageDiv.innerHTML = ''; }, 3000);
+                } else {
+                    messageDiv.innerHTML = `<span class="text-danger fw-bold">Error: ${data.error || 'Could not add stock.'}</span>`;
+                }
+            } catch (err) {
+                messageDiv.innerHTML = '<span class="text-danger fw-bold">Error: Could not connect to server.</span>';
+            }
+        });
+    </script>
+</body>
+</html>

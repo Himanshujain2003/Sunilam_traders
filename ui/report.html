@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Most Selling Products – Weekly & Monthly</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --ink: #222;
+      --muted: #6b7280;
+      --brand: #34495e;
+      --brand-2: #34495e;
+      --ring: rgba(52, 73, 94, 0.35);
+      --radius: 16px;
+    }
+    body {
+      background-color: #f8f9fa;
+      background-image: url("/assets/backk.png");
+      font-family: Arial, sans-serif;
+      color: #333;
+      background-size: cover;
+      margin: 0;
+    }
+    .wrap {
+        max-width: 1100px;
+        margin: 28px auto;
+        padding: 20px;
+        background: rgba(142,126,126);
+        border-radius: 15px;
+        box-shadow: 0 6px 8px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: #0f172a;
+      color: #fff;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      box-shadow: 0 6px 24px rgba(2,6,23,.16);
+    }
+    .header h1 {
+      margin: 0;
+      font-size: clamp(1.05rem, 2.2vw, 1.4rem);
+      font-weight: 700;
+      letter-spacing: .2px;
+      flex-grow: 1;
+      text-align: center;
+    }
+    .controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .btn {
+      appearance: none;
+      border: 1px solid transparent;
+      background: #34495e;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .2s ease;
+      text-decoration: none;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(0,0,0,.08);
+      background: #2c3e50;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 28px rgba(2,6,23,.08);
+      padding: 16px;
+    }
+    .grid { display: grid;
+         gap: 16px;
+         grid-template-columns: 1fr;
+        justify-content: center;
+        align-items: stretch;
+        margin-top: 16px;
+    }
+    @media (min-width: 640px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .title { font-size: 1rem; font-weight: 800; }
+    .muted { color: var(--muted); font-size: .9rem; }
+
+    .seg {
+      display: inline-flex;
+      gap: 6px;
+      background: #eef2ff;
+      border: 1px solid #dbeafe;
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .seg button {
+      border: 0;
+      background: transparent;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 700;
+      color: #1e293b;
+      cursor: pointer;
+    }
+    .seg button.active {
+      background: var(--brand);
+      color: #fff;
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+
+    .table-wrap { overflow: auto; border-radius: 12px; border: 1px solid #e5e7eb; }
+    table { width: 100%; border-collapse: collapse; background: #fff; }
+    thead th {
+      background: #f3f4f6;
+      font-weight: 800;
+      text-align: left;
+      padding: 10px 12px;
+      font-size: .9rem;
+      color: #111827;
+    }
+    tbody td { border-top: 1px solid #f1f5f9; padding: 10px 12px; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #f1f5f9; font-weight: 700; font-size: .8rem; }
+    .right { text-align: right; }
+    .empty { text-align: center; color: var(--muted); padding: 20px; }
+    .notice {
+      padding: 10px 12px;
+      background: #fff7ed;
+      border: 1px solid #ffedd5;
+      color: #9a3412;
+      border-radius: 10px;
+    }
+    .imglogo {
+      width: 160px;
+      height: 120px;
+      border-radius: 50%;
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+
+<body>
+  <img src="/assets/logo.png" alt="Logo" class="imglogo" />
+
+  <div class="wrap">
+    <div class="header">
+      <a href="home.html" class="btn">← Back</a>
+      <h1>Most Selling Products</h1>
+      <div class="controls">
+        <div class="seg">
+          <button id="btnWeek" class="active">This Week</button>
+          <button id="btnMonth">This Month</button>
+        </div>
+        <button id="btnRefresh" class="btn">Refresh</button>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:16px;">
+      <div class="card">
+        <div class="section-title">
+          <div>
+            <div class="title" id="chartTitle">Weekly Product Share (%)</div>
+            <div class="muted" id="rangeText">Last 7 days</div>
+          </div>
+          <div class="muted" id="totalText">Total Qty: 0</div>
+        </div>
+        <canvas id="pieCanvas" height="280"></canvas>
+        <div id="emptyChart" class="empty" style="display:none;">No data found.</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">
+          <div class="title">Top Products</div>
+          <span class="muted">(sorted by quantity)</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Product</th>
+                <th class="right">Qty</th>
+                <th class="right">Share %</th>
+              </tr>
+            </thead>
+            <tbody id="rows">
+              <tr><td colspan="4" class="empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="notice" style="margin-top:12px;">
+          Tip: Use the switch above to toggle between <b>This Week</b> and <b>This Month</b>.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ✅ Use absolute URL for backend API (change port if needed)
+    const API = "http://127.0.0.1:5000/api/stocks/report"; 
+    let currentType = 'week';
+    let currentData = [];
+    let chartRef = null;
+
+    const btnWeek = document.getElementById('btnWeek');
+    const btnMonth = document.getElementById('btnMonth');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const rowsEl = document.getElementById('rows');
+    const totalText = document.getElementById('totalText');
+    const chartTitle = document.getElementById('chartTitle');
+    const rangeText = document.getElementById('rangeText');
+    const pieCanvas = document.getElementById('pieCanvas');
+    const emptyChart = document.getElementById('emptyChart');
+
+    function setActive(type){
+      currentType = type;
+      btnWeek.classList.toggle('active', type==='week');
+      btnMonth.classList.toggle('active', type==='month');
+      chartTitle.textContent = type==='week' ? 'Weekly Product Share (%)' : 'Monthly Product Share (%)';
+      rangeText.textContent = type==='week' ? 'Last 7 days' : 'Current month';
+    }
+
+    function buildChart(labels, data){
+      if (chartRef) { chartRef.destroy(); }
+      if (!labels.length) {
+        pieCanvas.style.display = 'none';
+        emptyChart.style.display = 'block';
+        return;
+      }
+      emptyChart.style.display = 'none';
+      pieCanvas.style.display = 'block';
+      chartRef = new Chart(pieCanvas.getContext('2d'), {
+        type: 'doughnut',
+        data: { 
+          labels, 
+          datasets: [{
+            data,
+            backgroundColor: [
+              '#FF6384','#36A2EB','#FFCE56',
+              '#4BC0C0','#9966FF','#FF9F40',
+              '#16a34a','#1f6feb'
+            ]
+          }] 
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } },
+          cutout: '58%'
+        }
+      });
+    }
+
+    function renderTable(items){
+      rowsEl.innerHTML = '';
+      if (!items.length){
+        rowsEl.innerHTML = '<tr><td colspan="4" class="empty">No rows to display</td></tr>';
+        return;
+      }
+      items.forEach((r, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="badge">${i+1}</span></td>
+          <td>${r.product_name ?? '—'}</td>
+          <td class="right">${Number(r.total_quantity||0)}</td>
+          <td class="right">${Number(r.percentage||0).toFixed(2)}%</td>
+        `;
+        rowsEl.appendChild(tr);
+      });
+    }
+
+    async function load(){
+      rowsEl.innerHTML = '<tr><td colspan="4" class="empty">Loading…</td></tr>';
+      totalText.textContent = 'Total Qty: …';
+      try {
+        const res = await fetch(`${API}?type=${currentType}`);
+        const data = await res.json();
+        const totalQty = data.reduce((a,b)=> a + Number(b.total_quantity||0), 0);
+        const labels = data.map(d=> d.product_name);
+        const share = data.map(d=> Number(d.percentage||0));  
+        totalText.textContent = `Total Qty: ${totalQty}`;
+        buildChart(labels, share);
+        renderTable(data);
+      } catch (e) {
+        console.error(e);
+        rowsEl.innerHTML = '<tr><td colspan="4" class="empty">Failed to load data</td></tr>';
+        buildChart([], []);
+        totalText.textContent = 'Total Qty: 0';
+      }
+    }
+
+    btnWeek.addEventListener('click', () => { setActive('week'); load(); });
+    btnMonth.addEventListener('click', () => { setActive('month'); load(); });
+    btnRefresh.addEventListener('click', load);
+
+    setActive('week');
+    load();
+  </script>
+</body>
+</html>
