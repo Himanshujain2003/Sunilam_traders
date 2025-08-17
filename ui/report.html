@@ -6,6 +6,7 @@
   <title>Most Selling Products – Weekly & Monthly</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
+    
     :root {
       --bg: #f6f7fb;
       --card: #ffffff;
@@ -17,6 +18,7 @@
       --radius: 16px;
     }
     body {
+      overflow: hidden;
       background-color: #f8f9fa;
       background-image: url("/assets/backk.png");
       font-family: Arial, sans-serif;
@@ -25,10 +27,11 @@
       margin: 0;
     }
     .wrap {
-        max-width: 1100px;
+
+        max-width: 900px;
         margin: 28px auto;
         padding: 20px;
-        background: rgba(142,126,126);
+        background: rgba(142,126,126,0.9);
         border-radius: 15px;
         box-shadow: 0 6px 8px rgba(0, 0, 0, 0.1);
     }
@@ -69,34 +72,24 @@
       box-shadow: 0 6px 16px rgba(0,0,0,.08);
       background: #2c3e50;
     }
-
     .card {
       background: var(--card);
       border-radius: var(--radius);
       box-shadow: 0 10px 28px rgba(2,6,23,.08);
       padding: 16px;
     }
-    .grid { display: grid;
-         gap: 16px;
-         grid-template-columns: 1fr;
-        justify-content: center;
-        align-items: stretch;
-        margin-top: 16px;
-    }
+    .grid { display: grid; gap: 16px; grid-template-columns: 1fr; margin-top: 16px; }
     @media (min-width: 640px) {
       .grid { grid-template-columns: repeat(2, 1fr); }
     }
-
     .section-title {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
       margin-bottom: 8px;
     }
     .title { font-size: 1rem; font-weight: 800; }
     .muted { color: var(--muted); font-size: .9rem; }
-
     .seg {
       display: inline-flex;
       gap: 6px;
@@ -119,7 +112,6 @@
       color: #fff;
       box-shadow: 0 0 0 3px var(--ring);
     }
-
     .table-wrap { overflow: auto; border-radius: 12px; border: 1px solid #e5e7eb; }
     table { width: 100%; border-collapse: collapse; background: #fff; }
     thead th {
@@ -165,11 +157,15 @@
           <button id="btnWeek" class="active">This Week</button>
           <button id="btnMonth">This Month</button>
         </div>
-        <button id="btnRefresh" class="btn">Refresh</button>
+        
+        <input type="date" id="startDate" class="btn" style="color-scheme: dark;" title="Start Date">
+        <input type="date" id="endDate" class="btn" style="color-scheme: dark;" title="End Date">
+        <button id="btnApply" class="btn">Apply</button>
+        <button id="btnExport" class="btn" style="margin-left:8px;">Export CSV</button>
       </div>
     </div>
 
-    <div class="grid" style="margin-top:16px;">
+    <div class="grid">
       <div class="card">
         <div class="section-title">
           <div>
@@ -178,15 +174,17 @@
           </div>
           <div class="muted" id="totalText">Total Qty: 0</div>
         </div>
+        <div class="muted" id="totalQtyText">Total Qty: 0</div>
         <canvas id="pieCanvas" height="280"></canvas>
         <div id="emptyChart" class="empty" style="display:none;">No data found.</div>
       </div>
 
       <div class="card">
         <div class="section-title">
-          <div class="title">Top Products</div>
+          <div class="title">Sold Products</div>
           <span class="muted">(sorted by quantity)</span>
         </div>
+        <input type="text" id="searchInput" class="btn" placeholder="Search product..." style="margin-bottom:8px;">
         <div class="table-wrap">
           <table>
             <thead>
@@ -194,7 +192,7 @@
                 <th>#</th>
                 <th>Product</th>
                 <th class="right">Qty</th>
-                <th class="right">Share %</th>
+                <th class="right">Amount</th>
               </tr>
             </thead>
             <tbody id="rows">
@@ -202,6 +200,7 @@
             </tbody>
           </table>
         </div>
+        <div id="pagination" style="display:flex;gap:8px;justify-content:center;margin:16px 0;"></div>
         <div class="notice" style="margin-top:12px;">
           Tip: Use the switch above to toggle between <b>This Week</b> and <b>This Month</b>.
         </div>
@@ -210,104 +209,289 @@
   </div>
 
   <script>
-    // ✅ Use absolute URL for backend API (change port if needed)
-    const API = "http://127.0.0.1:5000/api/stocks/report"; 
-    let currentType = 'week';
-    let currentData = [];
+    // --- CONFIGURATION & DOM ELEMENTS ---
+    const API_URL = "http://127.0.0.1:5000/api/stocks/report"; 
     let chartRef = null;
+    const COLORS = [
+      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+      '#16a34a', '#1f6feb', '#e67e22', '#2ecc71', '#e74c3c', '#8e44ad'
+    ];
 
     const btnWeek = document.getElementById('btnWeek');
     const btnMonth = document.getElementById('btnMonth');
-    const btnRefresh = document.getElementById('btnRefresh');
+    const btnApply = document.getElementById('btnApply');
+    const btnExport = document.getElementById('btnExport');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
     const rowsEl = document.getElementById('rows');
     const totalText = document.getElementById('totalText');
     const chartTitle = document.getElementById('chartTitle');
     const rangeText = document.getElementById('rangeText');
     const pieCanvas = document.getElementById('pieCanvas');
     const emptyChart = document.getElementById('emptyChart');
+    const totalQtyText = document.getElementById('totalQtyText');
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', () => {
+      reloadCurrent();
+    });
+    
+    // --- UI FUNCTIONS ---
 
-    function setActive(type){
-      currentType = type;
-      btnWeek.classList.toggle('active', type==='week');
-      btnMonth.classList.toggle('active', type==='month');
-      chartTitle.textContent = type==='week' ? 'Weekly Product Share (%)' : 'Monthly Product Share (%)';
-      rangeText.textContent = type==='week' ? 'Last 7 days' : 'Current month';
+    /**
+     * Clears the date input fields.
+     */
+    function clearDateInputs() {
+      startDateInput.value = '';
+      endDateInput.value = '';
     }
 
-    function buildChart(labels, data){
-      if (chartRef) { chartRef.destroy(); }
-      if (!labels.length) {
-        pieCanvas.style.display = 'none';
-        emptyChart.style.display = 'block';
-        return;
+    /**
+     * Updates UI to reflect the active filter type (week, month, or custom).
+     * @param {'week' | 'month' | 'custom'} type The type of filter being applied.
+     */
+    function setActive(type) {
+      btnWeek.classList.toggle('active', type === 'week');
+      btnMonth.classList.toggle('active', type === 'month');
+
+      if (type === 'week') {
+        chartTitle.textContent = 'Weekly Product Sales Amount';
+        rangeText.textContent = 'Last 7 days';
+        clearDateInputs();
+      } else if (type === 'month') {
+        chartTitle.textContent = 'Monthly Product Sales Amount';
+        rangeText.textContent = 'Current month';
+        clearDateInputs();
       }
-      emptyChart.style.display = 'none';
-      pieCanvas.style.display = 'block';
+      // For 'custom', the title and range text are set in the event listener.
+    }
+
+    /**
+     * Builds or updates the doughnut chart with new data.
+     * @param {string[]} labels - The labels for the chart segments.
+     * @param {number[]} data - The data points for the chart.
+     */
+    function buildChart(labels, data) {
+      if (chartRef) { chartRef.destroy(); }
+
+      const hasData = labels && labels.length > 0;
+      pieCanvas.style.display = hasData ? 'block' : 'none';
+      emptyChart.style.display = hasData ? 'none' : 'block';
+
+      if (!hasData) return;
+
       chartRef = new Chart(pieCanvas.getContext('2d'), {
         type: 'doughnut',
-        data: { 
-          labels, 
+        data: {
+          labels,
           datasets: [{
             data,
-            backgroundColor: [
-              '#FF6384','#36A2EB','#FFCE56',
-              '#4BC0C0','#9966FF','#FF9F40',
-              '#16a34a','#1f6feb'
-            ]
-          }] 
+            backgroundColor: COLORS,
+            borderWidth: 0,
+          }]
         },
         options: {
           responsive: true,
-          plugins: { legend: { position: 'bottom' } },
+          plugins: { legend: { position: 'bottom', labels: { padding: 20 } } },
           cutout: '58%'
         }
       });
     }
 
-    function renderTable(items){
+    /**
+     * Populates the top products table with data.
+     * @param {object[]} items - The list of product data.
+     */
+    function renderTable(items) {
+      const searchTerm = (searchInput.value || '').toLowerCase();
       rowsEl.innerHTML = '';
-      if (!items.length){
-        rowsEl.innerHTML = '<tr><td colspan="4" class="empty">No rows to display</td></tr>';
+      const filtered = items.filter(r => r.product_name.toLowerCase().includes(searchTerm));
+      if (!filtered.length) {
+        rowsEl.innerHTML = '<tr><td colspan="4" class="empty">No products found for this period.</td></tr>';
         return;
       }
-      items.forEach((r, i) => {
+      filtered.forEach((r, i) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><span class="badge">${i+1}</span></td>
+          <td><span class="badge">${i + 1}</span></td>
           <td>${r.product_name ?? '—'}</td>
-          <td class="right">${Number(r.total_quantity||0)}</td>
-          <td class="right">${Number(r.percentage||0).toFixed(2)}%</td>
+          <td class="right">${Number(r.total_quantity || 0)}</td>
+          <td class="right">₹${Number(r.total_amount || 0).toFixed(2)}</td>
         `;
         rowsEl.appendChild(tr);
       });
     }
 
-    async function load(){
+    let currentPage = 1;
+    const pageSize = 5;
+    const paginationEl = document.getElementById('pagination');
+
+    function renderPagination(totalCount, page, pageSize) {
+      const totalPages = Math.ceil(totalCount / pageSize);
+      paginationEl.innerHTML = '';
+
+      if (totalPages <= 1) {
+        paginationEl.style.display = 'none';
+        return;
+      }
+      paginationEl.style.display = 'flex';
+
+      const prevBtn = document.createElement('button');
+      prevBtn.textContent = 'Prev';
+      prevBtn.className = 'btn';
+      prevBtn.disabled = page <= 1;
+      prevBtn.onclick = () => {
+        if (page > 1) {
+          currentPage--;
+          reloadCurrent();
+        }
+      };
+      paginationEl.appendChild(prevBtn);
+
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || Math.abs(i - page) <= 2) {
+          const pageBtn = document.createElement('button');
+          pageBtn.textContent = i;
+          pageBtn.className = 'btn' + (i === page ? ' active' : '');
+          pageBtn.onclick = () => {
+            currentPage = i;
+            reloadCurrent();
+          };
+          paginationEl.appendChild(pageBtn);
+        } else if (i === page - 3 || i === page + 3) {
+          const dots = document.createElement('span');
+          dots.textContent = '...';
+          dots.style.padding = '0 6px';
+          paginationEl.appendChild(dots);
+        }
+      }
+
+      const nextBtn = document.createElement('button');
+      nextBtn.textContent = 'Next';
+      nextBtn.className = 'btn';
+      nextBtn.disabled = page >= totalPages;
+      nextBtn.onclick = () => {
+        if (page < totalPages) {
+          currentPage++;
+          reloadCurrent();
+        }
+      };
+      paginationEl.appendChild(nextBtn);
+    }
+
+    function reloadCurrent() {
+      // Determine current filter
+      if (btnWeek.classList.contains('active')) {
+        loadData({ type: 'week', page: currentPage, page_size: pageSize });
+      } else if (btnMonth.classList.contains('active')) {
+        loadData({ type: 'month', page: currentPage, page_size: pageSize });
+      } else if (startDateInput.value && endDateInput.value) {
+        loadData({ start_date: startDateInput.value, end_date: endDateInput.value, page: currentPage, page_size: pageSize });
+      } else {
+        loadData({ type: 'week', page: currentPage, page_size: pageSize });
+      }
+    }
+
+    /**
+     * Fetches report data from the API and updates the entire UI.
+     * @param {object} params - The query parameters for the API call (e.g., {type: 'week'}).
+     */
+    async function loadData(params) {
       rowsEl.innerHTML = '<tr><td colspan="4" class="empty">Loading…</td></tr>';
-      totalText.textContent = 'Total Qty: …';
+      totalText.textContent = 'Total Amount: …';
+      buildChart([], []);
+      paginationEl.innerHTML = '';
+
+      params.page = params.page || currentPage;
+      params.page_size = params.page_size || pageSize;
+
+      const query = new URLSearchParams(params).toString();
+      const url = `${API_URL}?${query}`;
+
       try {
-        const res = await fetch(`${API}?type=${currentType}`);
-        const data = await res.json();
-        const totalQty = data.reduce((a,b)=> a + Number(b.total_quantity||0), 0);
-        const labels = data.map(d=> d.product_name);
-        const share = data.map(d=> Number(d.percentage||0));  
-        totalText.textContent = `Total Qty: ${totalQty}`;
-        buildChart(labels, share);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to fetch: ${res.statusText}`);
+        const result = await res.json();
+        const data = result.items || [];
+        const totalAmount = data.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+        const totalQty = data.reduce((sum, item) => sum + Number(item.total_quantity || 0), 0);
+        totalQtyText.textContent = `Total Qty: ${totalQty}`;
+        totalText.textContent = `Total Amount: ₹${totalAmount.toFixed(2)}`;
+
+        const labels = data.map(item => item.product_name || 'Unknown');
+        const amounts = data.map(item => Number(item.total_amount || 0));
+
+        buildChart(labels, amounts);
         renderTable(data);
+        renderPagination(result.total_count, result.page, result.page_size);
       } catch (e) {
         console.error(e);
         rowsEl.innerHTML = '<tr><td colspan="4" class="empty">Failed to load data</td></tr>';
         buildChart([], []);
-        totalText.textContent = 'Total Qty: 0';
+        totalText.textContent = 'Total Amount: 0';
+        paginationEl.innerHTML = '';
       }
     }
 
-    btnWeek.addEventListener('click', () => { setActive('week'); load(); });
-    btnMonth.addEventListener('click', () => { setActive('month'); load(); });
-    btnRefresh.addEventListener('click', load);
+    // --- EVENT LISTENERS & INITIALIZATION ---
+
+    btnWeek.addEventListener('click', () => {
+      currentPage = 1;
+      setActive('week');
+      loadData({ type: 'week', page: currentPage, page_size: pageSize });
+    });
+
+    btnMonth.addEventListener('click', () => {
+      currentPage = 1;
+      setActive('month');
+      loadData({ type: 'month', page: currentPage, page_size: pageSize });
+    });
+
+    btnApply.addEventListener('click', () => {
+      const startDate = startDateInput.value;
+      const endDate = endDateInput.value;
+      if (startDate && endDate) {
+        if (new Date(startDate) > new Date(endDate)) {
+          alert('Start date cannot be after the end date.');
+          return;
+        }
+        currentPage = 1;
+        setActive('custom');
+        chartTitle.textContent = 'Custom Range Product Sales Amount';
+        rangeText.textContent = `From ${startDate} to ${endDate}`;
+        loadData({ start_date: startDate, end_date: endDate, page: currentPage, page_size: pageSize });
+      } else if (startDate || endDate) {
+        alert('Please select both a start and end date for the custom range.');
+      } else {
+        const activeType = btnWeek.classList.contains('active') ? 'week' : 'month';
+        loadData({ type: activeType, page: currentPage, page_size: pageSize });
+      }
+    });
+
+    // Deactivate preset buttons when a date is picked to improve UX
+    [startDateInput, endDateInput].forEach(input => input.addEventListener('input', () => {
+        if(startDateInput.value || endDateInput.value) setActive('custom');
+    }));
+
+    btnExport.addEventListener('click', () => {
+      // Export current table data to CSV
+      let csv = 'Product,Quantity,Amount\n';
+      Array.from(rowsEl.children).forEach(tr => {
+        const tds = tr.querySelectorAll('td');
+        if (tds.length === 4 && !tr.classList.contains('empty')) {
+          csv += `${tds[1].textContent},${tds[2].textContent},${tds[3].textContent.replace('₹','')}\n`;
+        }
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sales_report.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
 
     setActive('week');
-    load();
+    loadData({ type: 'week' });
   </script>
 </body>
 </html>

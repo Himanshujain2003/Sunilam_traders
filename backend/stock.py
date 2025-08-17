@@ -413,40 +413,76 @@ def get_daily_business_states():
 @app.route('/api/stocks/report', methods=['GET'])
 def get_report():
     try:
-        report_type = request.args.get('type', 'week')  # default week
         conn = get_sql_connection()
         cursor = conn.cursor(dictionary=True)
 
-        if report_type == 'week':
-            query = """
-                SELECT b.product_name, SUM(b.quantity) as total_quantity,
-                       ROUND(SUM(b.quantity) * 100 / SUM(SUM(b.quantity)) OVER(), 2) as percentage
-                FROM business b
-                WHERE b.transaction_type = 'Sell' AND b.entry_datetime >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-                GROUP BY b.product_name
-                ORDER BY total_quantity DESC
-            """
-        elif report_type == 'month':
-            query = """
-                SELECT b.product_name, SUM(b.quantity) as total_quantity,
-                       ROUND(SUM(b.quantity) * 100 / SUM(SUM(b.quantity)) OVER(), 2) as percentage
-                FROM business b
-                WHERE b.transaction_type = 'Sell' AND MONTH(b.entry_datetime) = MONTH(CURDATE())
-                  AND YEAR(b.entry_datetime) = YEAR(CURDATE())
-                GROUP BY b.product_name
-                ORDER BY total_quantity DESC
-            """
-        else:
-            return jsonify({"error": "Invalid type"}), 400
+        # Get query params
+        report_type = request.args.get('type')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        page = int(request.args.get('page', 1))
+        page_size = int(request.args.get('page_size', 10))
+        offset = (page - 1) * page_size
 
-        cursor.execute(query)
-        data = cursor.fetchall()
+        # Build WHERE clause based on params
+        where_clauses = ["b.transaction_type = 'sell'"]
+        params = []
+
+        if report_type == 'week':
+            today = datetime.now().date()
+            week_ago = today - timedelta(days=6)
+            where_clauses.append("DATE(b.entry_datetime) BETWEEN %s AND %s")
+            params.extend([week_ago.strftime('%Y-%m-%d'), today.strftime('%Y-%m-%d')])
+        elif report_type == 'month':
+            today = datetime.now().date()
+            first_day = today.replace(day=1)
+            where_clauses.append("DATE(b.entry_datetime) BETWEEN %s AND %s")
+            params.extend([first_day.strftime('%Y-%m-%d'), today.strftime('%Y-%m-%d')])
+        elif start_date and end_date:
+            where_clauses.append("DATE(b.entry_datetime) BETWEEN %s AND %s")
+            params.extend([start_date, end_date])
+
+        where_sql = " AND ".join(where_clauses)
+
+        # Get total count for pagination
+        count_query = f"""
+            SELECT COUNT(DISTINCT b.product_name)
+            FROM business b
+            WHERE {where_sql}
+        """
+        cursor.execute(count_query, tuple(params))
+        total_count = cursor.fetchone()['COUNT(DISTINCT b.product_name)']
+
+        # Get paginated data
+        query = f"""
+            SELECT 
+                b.product_name, 
+                SUM(b.quantity) AS total_quantity,
+                SUM(b.amount) AS total_amount
+            FROM business b
+            WHERE {where_sql}
+            GROUP BY b.product_name
+            ORDER BY total_quantity DESC
+            LIMIT %s OFFSET %s
+        """
+        cursor.execute(query, tuple(params) + (page_size, offset))
+        report_data = cursor.fetchall()
+
+        total_sales = sum([row["total_amount"] for row in report_data])
+        for row in report_data:
+            row["total_sales"] = row["total_amount"]
+
         cursor.close()
-        return jsonify(data)
+        conn.close()
+        return jsonify({
+            "items": report_data,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size
+        })
 
     except Error as e:
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/api/units', methods=['GET'])
 def get_units():
