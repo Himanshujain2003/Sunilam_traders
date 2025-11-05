@@ -36,3 +36,6 @@ DataBase-MySQL WorkBench
 
 Conclusion
 The Sunilam Traders management system is a complete solution for grocery store operations. It modernizes store management, reduces human error, and ensures the business can continue to operate efficiently while maintaining the trust it has built since 1975.
+
+ IMAGE SCREENSHOT
+ <img width="1912" height="887" alt="image" src="https://github.com/user-attachments/assets/8fee1646-23c9-480b-864b-e1437ce67ca0" />
